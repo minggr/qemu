@@ -169,4 +169,30 @@ struct vhost_scsi_target {
 #define VHOST_SCSI_SET_EVENTS_MISSED _IOW(VHOST_VIRTIO, 0x43, __u32)
 #define VHOST_SCSI_GET_EVENTS_MISSED _IOW(VHOST_VIRTIO, 0x44, __u32)
 
+struct vhost_nvme_target {
+        char vhost_wwpn[224]; /* TRANSPORT_IQN_LEN */
+};
+
+struct vhost_nvme_eventfd {
+        int num;
+        int fd;
+        int *irq_enabled;
+        int *vector;
+};
+
+#define VHOST_NVME_BAR_READ 0
+#define VHOST_NVME_BAR_WRITE 1
+
+struct vhost_nvme_bar {
+        int type; /* read/write */
+        uint64_t offset;
+        unsigned size;
+        uint64_t val;
+};
+
+#define VHOST_NVME_SET_ENDPOINT _IOW(VHOST_VIRTIO, 0x45, struct vhost_nvme_target)
+#define VHOST_NVME_CLEAR_ENDPOINT _IOW(VHOST_VIRTIO, 0x46, struct vhost_nvme_target)
+#define VHOST_NVME_SET_EVENTFD _IOW(VHOST_VIRTIO, 0x47, struct vhost_nvme_eventfd)
+#define VHOST_NVME_RW_BAR _IOW(VHOST_VIRTIO, 0x48, struct vhost_nvme_bar)
+
 #endif

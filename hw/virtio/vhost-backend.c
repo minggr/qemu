@@ -83,6 +83,24 @@ static int vhost_kernel_scsi_get_abi_version(struct vhost_dev *dev, int *version
     return vhost_kernel_call(dev, VHOST_SCSI_GET_ABI_VERSION, version);
 }
 
+static int vhost_kernel_nvme_set_endpoint(struct vhost_dev *dev,
+                                          struct vhost_nvme_target *target)
+{
+    return vhost_kernel_call(dev, VHOST_NVME_SET_ENDPOINT, target);
+}
+
+static int vhost_kernel_nvme_rw_bar(struct vhost_dev *dev,
+                                          struct vhost_nvme_bar *bar)
+{
+    return vhost_kernel_call(dev, VHOST_NVME_RW_BAR, bar);
+}
+
+static int vhost_kernel_nvme_set_eventfd(struct vhost_dev *dev,
+                                          struct vhost_nvme_eventfd *eventfd)
+{
+    return vhost_kernel_call(dev, VHOST_NVME_SET_EVENTFD, eventfd);
+}
+
 static int vhost_kernel_set_log_base(struct vhost_dev *dev, uint64_t base,
                                      struct vhost_log *log)
 {
@@ -175,6 +193,9 @@ static const VhostOps kernel_ops = {
         .vhost_scsi_set_endpoint = vhost_kernel_scsi_set_endpoint,
         .vhost_scsi_clear_endpoint = vhost_kernel_scsi_clear_endpoint,
         .vhost_scsi_get_abi_version = vhost_kernel_scsi_get_abi_version,
+        .vhost_nvme_set_endpoint = vhost_kernel_nvme_set_endpoint,
+        .vhost_nvme_rw_bar = vhost_kernel_nvme_rw_bar,
+        .vhost_nvme_set_eventfd = vhost_kernel_nvme_set_eventfd,
         .vhost_set_log_base = vhost_kernel_set_log_base,
         .vhost_set_mem_table = vhost_kernel_set_mem_table,
         .vhost_set_vring_addr = vhost_kernel_set_vring_addr,

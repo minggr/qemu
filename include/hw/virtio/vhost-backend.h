@@ -27,6 +27,9 @@ struct vhost_vring_file;
 struct vhost_vring_state;
 struct vhost_vring_addr;
 struct vhost_scsi_target;
+struct vhost_nvme_target;
+struct vhost_nvme_bar;
+struct vhost_nvme_eventfd;
 
 typedef int (*vhost_backend_init)(struct vhost_dev *dev, void *opaque);
 typedef int (*vhost_backend_cleanup)(struct vhost_dev *dev);
@@ -40,6 +43,12 @@ typedef int (*vhost_scsi_clear_endpoint_op)(struct vhost_dev *dev,
                                     struct vhost_scsi_target *target);
 typedef int (*vhost_scsi_get_abi_version_op)(struct vhost_dev *dev,
                                              int *version);
+typedef int (*vhost_nvme_set_endpoint_op)(struct vhost_dev *dev,
+                                  struct vhost_nvme_target *target);
+typedef int (*vhost_nvme_rw_bar_op)(struct vhost_dev *dev,
+                                  struct vhost_nvme_bar *bar);
+typedef int (*vhost_nvme_set_eventfd_op)(struct vhost_dev *dev,
+                                  struct vhost_nvme_eventfd *eventfd);
 typedef int (*vhost_set_log_base_op)(struct vhost_dev *dev, uint64_t base,
                                      struct vhost_log *log);
 typedef int (*vhost_set_mem_table_op)(struct vhost_dev *dev,
@@ -80,6 +89,9 @@ typedef struct VhostOps {
     vhost_scsi_set_endpoint_op vhost_scsi_set_endpoint;
     vhost_scsi_clear_endpoint_op vhost_scsi_clear_endpoint;
     vhost_scsi_get_abi_version_op vhost_scsi_get_abi_version;
+    vhost_nvme_set_endpoint_op vhost_nvme_set_endpoint;
+    vhost_nvme_rw_bar_op vhost_nvme_rw_bar;
+    vhost_nvme_set_eventfd_op vhost_nvme_set_eventfd;
     vhost_set_log_base_op vhost_set_log_base;
     vhost_set_mem_table_op vhost_set_mem_table;
     vhost_set_vring_addr_op vhost_set_vring_addr;
