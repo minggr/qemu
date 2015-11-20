@@ -667,6 +667,7 @@ typedef struct NvmeSQueue {
      * do not go over this value will not result in MMIO writes (but will
      * still write the tail pointer to the "db_addr" location above). */
     uint64_t    eventidx_addr;
+    EventNotifier notifier;
 } NvmeSQueue;
 
 typedef struct NvmeCQueue {
@@ -689,6 +690,7 @@ typedef struct NvmeCQueue {
      * do not go over this value will not result in MMIO writes (but will
      * still write the head pointer to the "db_addr" location above). */
     uint64_t    eventidx_addr;
+    EventNotifier notifier;
 } NvmeCQueue;
 
 typedef struct NvmeNamespace {

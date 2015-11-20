@@ -543,6 +543,46 @@ static uint16_t nvme_set_feature(NvmeCtrl *n, NvmeCmd *cmd, NvmeRequest *req)
     return NVME_SUCCESS;
 }
 
+static void nvme_cq_notifier(EventNotifier *e)
+{
+    NvmeCQueue *cq =
+        container_of(e, NvmeCQueue, notifier);
+
+    event_notifier_test_and_clear(&cq->notifier);
+    nvme_post_cqes(cq);
+}
+
+static void nvme_init_cq_eventfd(NvmeCQueue *cq)
+{
+    NvmeCtrl *n = cq->ctrl;
+    uint16_t offset = (cq->cqid*2+1) * (4 << NVME_CAP_DSTRD(n->bar.cap));
+
+    event_notifier_init(&cq->notifier, 0);
+    event_notifier_set_handler(&cq->notifier, nvme_cq_notifier);
+    memory_region_add_eventfd(&n->iomem,
+        0x1000 + offset, 4, false, 0, &cq->notifier);
+}
+
+static void nvme_sq_notifier(EventNotifier *e)
+{
+    NvmeSQueue *sq =
+        container_of(e, NvmeSQueue, notifier);
+
+    event_notifier_test_and_clear(&sq->notifier);
+    nvme_process_sq(sq);
+}
+
+static void nvme_init_sq_eventfd(NvmeSQueue *sq)
+{
+    NvmeCtrl *n = sq->ctrl;
+    uint16_t offset = sq->sqid * 2 * (4 << NVME_CAP_DSTRD(n->bar.cap));
+
+    event_notifier_init(&sq->notifier, 0);
+    event_notifier_set_handler(&sq->notifier, nvme_sq_notifier);
+    memory_region_add_eventfd(&n->iomem,
+        0x1000 + offset, 4, false, 0, &sq->notifier);
+}
+
 static uint16_t nvme_set_db_memory(NvmeCtrl *n, const NvmeCmd *cmd)
 {
     uint64_t db_addr = le64_to_cpu(cmd->prp1);
@@ -565,6 +605,7 @@ static uint16_t nvme_set_db_memory(NvmeCtrl *n, const NvmeCmd *cmd)
             /* Submission queue tail pointer location, 2 * QID * stride. */
             sq->db_addr = db_addr + 2 * i * 4;
             sq->eventidx_addr = eventidx_addr + 2 * i * 4;
+            nvme_init_sq_eventfd(sq);
         }
 
         if (cq != NULL) {
@@ -572,6 +613,7 @@ static uint16_t nvme_set_db_memory(NvmeCtrl *n, const NvmeCmd *cmd)
              */
             cq->db_addr = db_addr + (2 * i + 1) * 4;
             cq->eventidx_addr = eventidx_addr + (2 * i + 1) * 4;
+            nvme_init_cq_eventfd(cq);
         }
     }
     return NVME_SUCCESS;
@@ -793,7 +835,7 @@ static void nvme_process_db(NvmeCtrl *n, hwaddr addr, int val)
         }
 
         cq = n->cq[qid];
-        if (new_head >= cq->size) {
+        if (!cq->db_addr && new_head >= cq->size) {
             return;
         }
 
