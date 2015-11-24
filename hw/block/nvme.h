@@ -727,6 +727,10 @@ typedef struct NvmeCtrl {
     NvmeSQueue      admin_sq;
     NvmeCQueue      admin_cq;
     NvmeIdCtrl      id_ctrl;
+
+    IOThread *iothread;
+    IOThread internal_iothread_obj;
+    AioContext *ctx;
 } NvmeCtrl;
 
 #endif /* HW_NVME_H */

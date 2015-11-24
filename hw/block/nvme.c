@@ -28,6 +28,8 @@
 #include "sysemu/sysemu.h"
 #include "qapi/visitor.h"
 #include "sysemu/block-backend.h"
+#include "sysemu/iothread.h"
+#include "qom/object_interfaces.h"
 
 #include "nvme.h"
 
@@ -549,7 +551,10 @@ static void nvme_cq_notifier(EventNotifier *e)
         container_of(e, NvmeCQueue, notifier);
 
     event_notifier_test_and_clear(&cq->notifier);
+
+    aio_context_acquire(cq->ctrl->ctx);
     nvme_post_cqes(cq);
+    aio_context_release(cq->ctrl->ctx);
 }
 
 static void nvme_init_cq_eventfd(NvmeCQueue *cq)
@@ -558,9 +563,12 @@ static void nvme_init_cq_eventfd(NvmeCQueue *cq)
     uint16_t offset = (cq->cqid*2+1) * (4 << NVME_CAP_DSTRD(n->bar.cap));
 
     event_notifier_init(&cq->notifier, 0);
-    event_notifier_set_handler(&cq->notifier, nvme_cq_notifier);
     memory_region_add_eventfd(&n->iomem,
         0x1000 + offset, 4, false, 0, &cq->notifier);
+    aio_context_acquire(n->ctx);
+    aio_set_event_notifier(n->ctx, &cq->notifier, false,
+                           nvme_cq_notifier);
+    aio_context_release(n->ctx);
 }
 
 static void nvme_sq_notifier(EventNotifier *e)
@@ -569,7 +577,9 @@ static void nvme_sq_notifier(EventNotifier *e)
         container_of(e, NvmeSQueue, notifier);
 
     event_notifier_test_and_clear(&sq->notifier);
+    aio_context_acquire(sq->ctrl->ctx);
     nvme_process_sq(sq);
+    aio_context_release(sq->ctrl->ctx);
 }
 
 static void nvme_init_sq_eventfd(NvmeSQueue *sq)
@@ -578,9 +588,22 @@ static void nvme_init_sq_eventfd(NvmeSQueue *sq)
     uint16_t offset = sq->sqid * 2 * (4 << NVME_CAP_DSTRD(n->bar.cap));
 
     event_notifier_init(&sq->notifier, 0);
-    event_notifier_set_handler(&sq->notifier, nvme_sq_notifier);
     memory_region_add_eventfd(&n->iomem,
         0x1000 + offset, 4, false, 0, &sq->notifier);
+    aio_context_acquire(n->ctx);
+    aio_set_event_notifier(n->ctx, &sq->notifier, false,
+                           nvme_sq_notifier);
+    aio_context_release(n->ctx);
+}
+
+static void nvme_init_iothread(NvmeCtrl *n)
+{
+    object_initialize(&n->internal_iothread_obj,
+                      sizeof(n->internal_iothread_obj),
+                      TYPE_IOTHREAD);
+    user_creatable_complete(OBJECT(&n->internal_iothread_obj), &error_abort);
+    n->iothread = &n->internal_iothread_obj;
+    n->ctx = iothread_get_aio_context(n->iothread);
 }
 
 static uint16_t nvme_set_db_memory(NvmeCtrl *n, const NvmeCmd *cmd)
@@ -594,6 +617,8 @@ static uint16_t nvme_set_db_memory(NvmeCtrl *n, const NvmeCmd *cmd)
         eventidx_addr == 0 || eventidx_addr & (n->page_size - 1)) {
         return NVME_INVALID_MEMORY_ADDRESS | NVME_DNR;
     }
+
+    nvme_init_iothread(n);
 
     /* This assumes all I/O queues are created before this command is handled.
      * We skip the admin queues. */
