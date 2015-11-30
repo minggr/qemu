@@ -143,6 +143,8 @@ static int vhost_nvme_set_memtable(VHostNVME *n)
     return 0;
 }
 
+#define PCI_VENDOR_ID_GOOGLE 0x1AE0
+
 static int vhost_nvme_init(PCIDevice *pci_dev)
 {
     VHostNVME *n = VHOST_NVME(pci_dev);
@@ -158,7 +160,7 @@ static int vhost_nvme_init(PCIDevice *pci_dev)
     pci_conf = pci_dev->config;
     pci_conf[PCI_INTERRUPT_PIN] = 1;
     pci_config_set_prog_interface(pci_dev->config, 0x2);
-    pci_config_set_vendor_id(pci_dev->config, PCI_VENDOR_ID_INTEL);
+    pci_config_set_vendor_id(pci_dev->config, PCI_VENDOR_ID_GOOGLE);
     pci_config_set_device_id(pci_dev->config, 0x5845);
     pci_config_set_class(pci_dev->config, PCI_CLASS_STORAGE_EXPRESS);
     pcie_endpoint_cap_init(&n->parent_obj, 0x80);
